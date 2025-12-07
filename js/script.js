@@ -8,21 +8,44 @@
     setTimeout(()=>{ try{ ov.style.display='none' }catch(e){} }, 420);
   }
 
+  // Simple coordinator for multiple load tasks so the overlay only hides
+  // when both document images and slideshow images are ready (or after timeout).
+  const _loadingTasks = { documentImages: true, slideshow: true };
+  function _markTaskDone(key){
+    if(!_loadingTasks.hasOwnProperty(key)) return;
+    _loadingTasks[key] = false;
+    const allDone = Object.keys(_loadingTasks).every(k => _loadingTasks[k] === false);
+    if(allDone) hideLoadingOverlay();
+  }
+  // Safety: ensure the overlay can't hang forever
+  setTimeout(()=>{ hideLoadingOverlay(); }, 16000);
+
   // Wait for current document images to load (useful for modal/card images)
   function waitForDocumentImages(timeout = 12000){
     try{
       const imgs = Array.from(document.images || []);
-      if(imgs.length === 0){ hideLoadingOverlay(); return; }
-      let remaining = imgs.length;
-      const done = () => { remaining -= 1; if(remaining <= 0) hideLoadingOverlay(); };
-      imgs.forEach(img => {
-        if(img.complete){ done(); return; }
-        img.addEventListener('load', done, {once:true});
-        img.addEventListener('error', done, {once:true});
-      });
+      if(imgs.length === 0){ _markTaskDone('documentImages'); return; }
+
+      // Use decode() when available to ensure the image is ready to be painted.
+      const promises = imgs.map(img => {
+        if(img.complete){ return Promise.resolve(); }
+        return new Promise((res) => {
+          img.addEventListener('load', res, {once:true});
+          img.addEventListener('error', res, {once:true});
+        });
+      }).map(p => p.then(()=>{}));
+
+      // Wait for loads then try decode for each element
+      Promise.all(promises).then(()=>{
+        const decodes = imgs.map(img => (img.decode ? img.decode().catch(()=>{}) : Promise.resolve()));
+        return Promise.all(decodes);
+      }).then(()=>{
+        _markTaskDone('documentImages');
+      }).catch(()=>{ _markTaskDone('documentImages'); });
+
       // safety fallback
-      setTimeout(hideLoadingOverlay, timeout);
-    }catch(e){ hideLoadingOverlay(); }
+      setTimeout(()=>{ _markTaskDone('documentImages'); }, timeout);
+    }catch(e){ _markTaskDone('documentImages'); }
   }
 
   // start waiting for images right away; slideshow code will call hideLoadingOverlay()
@@ -164,10 +187,14 @@
       wrapper.appendChild(s);
       slidesEl.appendChild(wrapper);
     }
+    // Wait for slideshow images to be decoded/ready before marking slideshow task done.
     update();
     startAutoplay();
-    // Slideshow images have been appended and autoplay started — hide the loading overlay.
-    try{ hideLoadingOverlay(); }catch(e){}
+    try{
+      const decodes = slides.map(img => (img.decode ? img.decode().catch(()=>{}) : Promise.resolve()));
+      await Promise.all(decodes);
+    }catch(e){}
+    _markTaskDone('slideshow');
   })();
 
   function update(){
