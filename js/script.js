@@ -18,10 +18,10 @@
     if(allDone) hideLoadingOverlay();
   }
   // Safety: ensure the overlay can't hang forever
-  setTimeout(()=>{ hideLoadingOverlay(); }, 16000);
+  setTimeout(()=>{ hideLoadingOverlay(); }, 60000);
 
   // Wait for current document images to load (useful for modal/card images)
-  function waitForDocumentImages(timeout = 12000){
+  function waitForDocumentImages(timeout = 60000){
     try{
       const imgs = Array.from(document.images || []);
       if(imgs.length === 0){ _markTaskDone('documentImages'); return; }
@@ -103,7 +103,7 @@
       img.onload=()=>res({ok:true,el:img});
       img.onerror=()=>res({ok:false});
       // prefer jpg then png fallback
-      img.src=`img/${i}.jpg`;
+      img.src=`img/${i}.png`;
     });
   }
 
@@ -148,7 +148,7 @@
       // Fallback: try numeric names as before
       for(let i=1;i<=MAX;i++){
         // try jpg then png
-        let r=await tryLoad(i);
+        let r= tryLoad(i);
         if(!r.ok){
           // try png
           r=new Promise((res)=>{
