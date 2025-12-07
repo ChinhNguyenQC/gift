@@ -103,3 +103,48 @@ html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;backg
   /* Slight visual hint when collapsed: keep slides area a bit shorter */
   .slides{height:50vh}
 }
+
+/* Loading overlay + spinner */
+.loading-overlay{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  /* keep the page (including the starfall canvas) visible by using a transparent overlay
+     and only give the spinner a small localized backdrop so the animation remains visible */
+  background: transparent;
+  z-index:10000;
+  transition:opacity .32s ease; 
+}
+.loading-overlay[aria-hidden="true"]{opacity:0;pointer-events:none}
+.spinner{
+  width:64px;
+  height:64px;
+  border-radius:50%;
+  border:6px solid rgba(255,255,255,0.08);
+  border-top-color:var(--accent);
+  box-shadow:0 4px 14px rgba(0,0,0,0.4);
+  animation:spin 900ms linear infinite;
+  position:relative; /* for localized backdrop pseudo-element */
+}
+/* small soft backdrop behind the spinner so it's readable while leaving the rest of the page visible */
+.spinner::before{
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(2,6,23,0.72) 0%, rgba(2,6,23,0.48) 40%, rgba(2,6,23,0.08) 100%);
+  filter: blur(6px);
+  z-index: -1;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Small screens: smaller spinner */
+@media (max-width:420px){
+  .spinner{width:44px;height:44px;border-width:5px}
+}

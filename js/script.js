@@ -1,4 +1,36 @@
  (function(){
+  // Loading overlay helpers: keep the overlay visible until key images are ready.
+  function hideLoadingOverlay(){
+    const ov = document.getElementById('loading-overlay');
+    if(!ov) return;
+    ov.setAttribute('aria-hidden','true');
+    // allow CSS opacity transition then remove from flow
+    setTimeout(()=>{ try{ ov.style.display='none' }catch(e){} }, 420);
+  }
+
+  // Wait for current document images to load (useful for modal/card images)
+  function waitForDocumentImages(timeout = 12000){
+    try{
+      const imgs = Array.from(document.images || []);
+      if(imgs.length === 0){ hideLoadingOverlay(); return; }
+      let remaining = imgs.length;
+      const done = () => { remaining -= 1; if(remaining <= 0) hideLoadingOverlay(); };
+      imgs.forEach(img => {
+        if(img.complete){ done(); return; }
+        img.addEventListener('load', done, {once:true});
+        img.addEventListener('error', done, {once:true});
+      });
+      // safety fallback
+      setTimeout(hideLoadingOverlay, timeout);
+    }catch(e){ hideLoadingOverlay(); }
+  }
+
+  // start waiting for images right away; slideshow code will call hideLoadingOverlay()
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', ()=>waitForDocumentImages());
+  } else {
+    waitForDocumentImages();
+  }
   // Prevent 'pull-to-refresh' / overscroll refresh on mobile browsers that
   // don't support `overscroll-behavior` (older iOS Safari). We only block
   // the downward pull when at the top of the page and a single touch is active.
@@ -134,6 +166,8 @@
     }
     update();
     startAutoplay();
+    // Slideshow images have been appended and autoplay started — hide the loading overlay.
+    try{ hideLoadingOverlay(); }catch(e){}
   })();
 
   function update(){
